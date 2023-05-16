@@ -4,42 +4,68 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.telephony.TelephonyManager
 import androidx.appcompat.app.AppCompatActivity
-import com.lysen.smsparsing.MainActivity
-import com.lysen.smsparsing.TelegramBotApi
-import com.lysen.smsparsing.models.TelegamAnswer
-import org.joda.time.DateTime
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
-import java.util.*
+import com.lysen.smsparsing.api.ApiSender
+import com.lysen.smsparsing.App
+import com.lysen.smsparsing.enums.NetState
+import com.lysen.smsparsing.enums.ReportKind
+
+
 
 class OfflineScheduler(private val context: Context) {
 
-    fun initScheduler() {
-        sendServiceIsAlive()
+    val alarmManager: AlarmManager = context.getSystemService(AppCompatActivity.ALARM_SERVICE) as AlarmManager
+    val connMgr = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager?
+    val SCHEDULER_INTERVAL = 60_000
+
+    fun initScheduler(needTosend: Boolean) {
+        if (checkNetwork() == NetState.WIFI_CELLULAR || checkNetwork() == NetState.ERROR || checkNetwork() == NetState.OFFLINE ) return
+        sendServiceIsAlive(needTosend)
         println("53ss   -------------------------------------------------------------------------------------------------")
-        val alarmManager = context.getSystemService(AppCompatActivity.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, SMS_Receiver::class.java)
         val pendingIntent = PendingIntent.getBroadcast(context, 111, intent, PendingIntent.FLAG_IMMUTABLE)
-        alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 60_000, pendingIntent)
+        alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + SCHEDULER_INTERVAL, pendingIntent)
     }
 
-    fun sendServiceIsAlive() {
-        val joda = DateTime(Date())
-        val date = "${joda.toString("dd")}-${joda.toString("MMM")}-${joda.toString("YYYY")} " +
-                "${joda.toString("HH")}:${joda.toString("mm")}:${joda.toString("ss")}  "
-        val vendor = android.os.Build.MODEL
-        TelegramBotApi.service.getSend(chat_id = MainActivity.CHAT_ID, text = "Service is alive:  ${date}\nDevice:  ${vendor}")?.enqueue(object : Callback<TelegamAnswer> {
-            override fun onResponse(call: Call<TelegamAnswer>, response: Response<TelegamAnswer>) {
-                println("53ss onResponse  response.body() =  " + response.body())
-                println("53ss onResponse  response.code() =  " + response.code())
-            }
+    private fun sendServiceIsAlive(needTosend: Boolean = true) {
+        if (!needTosend) return
+        ApiSender.send(reportKind = ReportKind.ALIVE)
+    }
 
-            override fun onFailure(call: Call<TelegamAnswer>, throwable: Throwable) {
-                println("53ss onFailure  throwable =  " + throwable.message)
-            }
-        })
+    fun checkNetwork(): NetState {
+        if (connMgr == null) {
+//            println("54ss ERROR  ")
+            App.netState.value = NetState.ERROR
+            return NetState.ERROR
+        }
+        val network = connMgr.activeNetwork ?: println("54ss ! WIFI + ! CELLULAR  ").also { App.netState.value = NetState.OFFLINE }.also { return NetState.OFFLINE }
+        val capabilities = connMgr.getNetworkCapabilities(network as Network) ?: return NetState.ERROR
+        if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) && capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+//            println("54ss WIFI +  CELLULAR  ")
+            App.netState.value = NetState.WIFI_CELLULAR
+            return NetState.WIFI_CELLULAR
+        } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) && !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+//            println("54ss WIFI +  ! CELLULAR  ")
+            App.netState.value = NetState.WIFI
+            return NetState.WIFI
+        } else if (!capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) && capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+//            println("54ss ! WIFI +  CELLULAR  ")
+            App.netState.value = NetState.CELLULAR
+            return NetState.CELLULAR
+        }
+        val bandwidth = capabilities.linkDownstreamBandwidthKbps
+        if (bandwidth < 500) {
+//            println("54ss WIFI_LOW  ")
+            ApiSender.send(reportKind = ReportKind.WIFI_LOW)
+            App.netState.value = NetState.WIFI_LOW
+            return NetState.WIFI_LOW
+        }
+        return NetState.ERROR
     }
 
 }
+

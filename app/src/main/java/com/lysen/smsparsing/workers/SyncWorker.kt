@@ -16,10 +16,10 @@ class SyncWorker(private val context: Context, parameters: WorkerParameters) : C
                 println("250ss   DataSyncWorker doWork 1")
                 val offlineScheduler = OfflineScheduler(context)
                 App.offlineScheduler = offlineScheduler
-                offlineScheduler.initScheduler()
+                offlineScheduler.initScheduler(true)
             } else {
                 println("250ss   DataSyncWorker doWork 2")
-                App.offlineScheduler!!.initScheduler()
+                App.offlineScheduler!!.initScheduler(true)
             }
         }
         Result.success()

@@ -11,10 +11,10 @@ android {
         applicationId "com.lysen.smsparsing"
         minSdk 28
         targetSdk 33
-        versionCode 1
-        versionName "1.0"
-
+        versionCode 4
+        versionName "1.4"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        setProperty("archivesBaseName", "smsparsing-$versionCode")
     }
 
     buildTypes {
@@ -51,4 +51,7 @@ dependencies {
 
     //joda time
     implementation 'net.danlew:android.joda:2.12.1'
+
+    implementation 'com.github.bumptech.glide:glide:4.13.2'
+    annotationProcessor 'com.github.bumptech.glide:compiler:4.12.0'
 }

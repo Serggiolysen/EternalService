@@ -1,19 +1,21 @@
 package com.lysen.smsparsing
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Bundle
-import android.os.PowerManager
+import android.os.*
 import android.provider.Settings
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.telephony.SubscriptionManager
+import android.view.*
+import android.widget.ImageView
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.AppCompatImageView
 import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -22,132 +24,162 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.bumptech.glide.Glide
+import com.bumptech.glide.request.RequestOptions
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.lysen.smsparsing.api.ApiSender
+import com.lysen.smsparsing.enums.NetState
+import com.lysen.smsparsing.enums.ReportKind
 import com.lysen.smsparsing.models.SmsObject
-import com.lysen.smsparsing.models.TelegamAnswer
 import com.lysen.smsparsing.utils.AutoStartHelper
 import com.lysen.smsparsing.workers.SMS_Receiver
 import com.lysen.smsparsing.workers.SyncWorker
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import org.joda.time.DateTime
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-class MainActivity : AppCompatActivity() {
+
+
+class MainActivity : AppCompatActivity(), ApiSender.ApiCallback {
 
     companion object {
         val REQUEST_CODE = 123222
         val REQUEST_CODE2 = 12322234
         val SMS_OBJECTS_LIST = "SMS_OBJECTS_LIST"
         val SMS_OBJECTS_NAME = "SMS_OBJECTS_NAME"
-        val CHAT_ID = "-934185155"
-//        val CHAT_ID = "6036255168"
     }
 
     private var recycler: RecyclerView? = null
     private var adapter: SmsAdapter? = null
+    private val job = Job()
+    private val scope = CoroutineScope(Dispatchers.Main + job)
+    private var SMS_EXTRA_TEL = ""
+    private var SMS_EXTRA_DATE = ""
+    private var SMS_EXTRA_MESS = ""
+    private var ACTION_TYPE = ""
+    private var SMS_SLOT = -1
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent) {
-            val SMS_EXTRA_TEL = intent.getStringExtra(SMS_Receiver.SMS_EXTRA_TEL)
-            val SMS_EXTRA_MESS = intent.getStringExtra(SMS_Receiver.SMS_EXTRA_MESS)
-            val ACTION_TYPE = intent.getStringExtra(SMS_Receiver.ACTION_TYPE)
+            SMS_EXTRA_TEL = intent.getStringExtra(SMS_Receiver.SMS_EXTRA_TEL) ?: ""
+            SMS_EXTRA_DATE = intent.getStringExtra(SMS_Receiver.SMS_EXTRA_DATE) ?: ""
+            SMS_EXTRA_MESS = intent.getStringExtra(SMS_Receiver.SMS_EXTRA_MESS) ?: ""
+            ACTION_TYPE = intent.getStringExtra(SMS_Receiver.ACTION_TYPE) ?: ""
+            SMS_SLOT = intent.getIntExtra(SMS_Receiver.SMS_SLOT, -1)
 
-            context?.let {
-                adapter?.updateAdapter(tel = SMS_EXTRA_TEL, mess = SMS_EXTRA_MESS, context = it, recyclerView = recycler)
-            }
-
-            val joda = DateTime(Date())
-            val date = "${joda.toString("dd")}-${joda.toString("MMM")}-${joda.toString("YYYY")} " +
-                    "${joda.toString("HH")}:${joda.toString("mm")}:${joda.toString("ss")}  "
-
-
+            println("54ss  updateAdapter smsSlot  =  " + SMS_SLOT)
             println("53ss ACTION_TYPE =  " + ACTION_TYPE)
 
+            if (ACTION_TYPE == Intent.ACTION_BOOT_COMPLETED) ApiSender.send(reportKind = ReportKind.REBOOTED)
 
-            val vendor = android.os.Build.MODEL
-            if (ACTION_TYPE == Intent.ACTION_BOOT_COMPLETED) {
-                TelegramBotApi.service.getSend(chat_id = CHAT_ID, text = "DEVICE IS REBOOTED:  ${date}\nDevice:  ${vendor}")?.enqueue(object : Callback<TelegamAnswer> {
-                    override fun onResponse(call: Call<TelegamAnswer>, response: Response<TelegamAnswer>) {
-                        println("53ss onResponse  response.body() =  " + response.body())
-                        println("53ss onResponse  response.code() =  " + response.code())
-                    }
+            if ( SMS_EXTRA_TEL.isEmpty() || SMS_EXTRA_MESS.isEmpty()) return
 
-                    override fun onFailure(call: Call<TelegamAnswer>, throwable: Throwable) {
-                        println("53ss onFailure  throwable =  " + throwable.message)
-                    }
-                })
-            }
-
-
-            if (SMS_EXTRA_TEL == null || SMS_EXTRA_MESS == null) return
-
-            TelegramBotApi.service.getSend(chat_id = CHAT_ID, text = "Date:  ${date}\nTel:  ${SMS_EXTRA_TEL}\nMessage:  ${SMS_EXTRA_MESS}")?.enqueue(object : Callback<TelegamAnswer> {
-                override fun onResponse(call: Call<TelegamAnswer>, response: Response<TelegamAnswer>) {
-                    println("53ss onResponse  response.body() =  " + response.body())
-                    println("53ss onResponse  response.code() =  " + response.code())
-                }
-
-                override fun onFailure(call: Call<TelegamAnswer>, throwable: Throwable) {
-                    println("53ss onFailure  throwable =  " + throwable.message)
-                }
-            })
+            ApiSender.send(reportKind = ReportKind.SMS, sms_extra_tel = SMS_EXTRA_TEL, sms_extra_mess = SMS_EXTRA_MESS, sms_extra_date = SMS_EXTRA_DATE, apiCallback = this@MainActivity)
         }
+    }
+
+    override fun onSuccess() {
+        println("53ss onSuccess() =  ")
+        adapter?.updateAdapter(tel = SMS_EXTRA_TEL, mess = SMS_EXTRA_MESS, context = this, recyclerView = recycler, smsSlot = SMS_SLOT.toString())
+    }
+
+    override fun onError() {
+        println("53ss onError() =  ")
     }
 
     private val batteryReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent) {
-            val joda = DateTime(Date())
-            val date = "${joda.toString("dd")}-${joda.toString("MMM")}-${joda.toString("YYYY")} " +
-                    "${joda.toString("HH")}:${joda.toString("mm")}:${joda.toString("ss")}  "
-            val vendor = android.os.Build.MODEL
-
-            println("53ss batteryReceiver = " + intent.action)
-            TelegramBotApi.service.getSend(chat_id = CHAT_ID, text = "BATTERY LOW:  ${date}\nDevice:  ${vendor}")?.enqueue(object : Callback<TelegamAnswer> {
-                override fun onResponse(call: Call<TelegamAnswer>, response: Response<TelegamAnswer>) {
-                    println("53ss onResponse  response.body() =  " + response.body())
-                    println("53ss onResponse  response.code() =  " + response.code())
-                }
-
-                override fun onFailure(call: Call<TelegamAnswer>, throwable: Throwable) {
-                    println("53ss onFailure  throwable =  " + throwable.message)
-                }
-            })
-
+            ApiSender.send(reportKind = ReportKind.BATTERY_LOW)
         }
     }
 
     private val powerReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent) {
-            val joda = DateTime(Date())
-            val date = "${joda.toString("dd")}-${joda.toString("MMM")}-${joda.toString("YYYY")} " +
-                    "${joda.toString("HH")}:${joda.toString("mm")}:${joda.toString("ss")}  "
-            val vendor = android.os.Build.MODEL
-
-            println("53ss DISCONNECTED = " + intent.action)
-            TelegramBotApi.service.getSend(chat_id = CHAT_ID, text = "CHARGER DISCONNECTED:  ${date}\nDevice:  ${vendor}")?.enqueue(object : Callback<TelegamAnswer> {
-                override fun onResponse(call: Call<TelegamAnswer>, response: Response<TelegamAnswer>) {
-                    println("53ss onResponse  response.body() =  " + response.body())
-                    println("53ss onResponse  response.code() =  " + response.code())
-                }
-
-                override fun onFailure(call: Call<TelegamAnswer>, throwable: Throwable) {
-                    println("53ss onFailure  throwable =  " + throwable.message)
-                }
-            })
-
+            ApiSender.send(reportKind = ReportKind.CHARGER_DISCONNECTED)
         }
     }
 
 
+    @RequiresApi(Build.VERSION_CODES.Q)
+    @SuppressLint("MissingPermission", "NewApi")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         requestPermissions()
+
+        val iv_wifi = findViewById<AppCompatImageView>(R.id.iv_wifi)
+        val tv_version = findViewById<AppCompatTextView>(R.id.tv_version)
+        val tv_sim1 = findViewById<AppCompatTextView>(R.id.tv_sim1)
+        val iv_danger_sim1 = findViewById<AppCompatImageView>(R.id.iv_danger_sim1)
+        val tv_sim2 = findViewById<AppCompatTextView>(R.id.tv_sim2)
+        val iv_danger_sim2 = findViewById<AppCompatImageView>(R.id.iv_danger_sim2)
+        val tv_sim3 = findViewById<AppCompatTextView>(R.id.tv_sim3)
+        val iv_danger_sim3 = findViewById<AppCompatImageView>(R.id.iv_danger_sim3)
+        val simViewsList = listOf<AppCompatTextView>(tv_sim1, tv_sim2, tv_sim3)
+        val simImagesList = listOf<AppCompatImageView>(iv_danger_sim1, iv_danger_sim2, iv_danger_sim3)
+
+        scope.launch {
+            App.netState.collect { netState ->
+                when (netState) {
+                    NetState.WIFI -> iv_wifi.setImageResource(R.drawable.ic_baseline_check_24)
+                    NetState.WIFI_CELLULAR -> iv_wifi.setImageResource(R.drawable.ic_baseline_check_24)
+//                    NetState.CELLULAR-> iv_wifi.setImageResource( R.drawable.ic_baseline_dangerous_24)
+//                    NetState.OFFLINE-> iv_wifi.setImageResource( R.drawable.ic_baseline_dangerous_24)
+//                    NetState.ERROR-> iv_wifi.setImageResource( R.drawable.ic_baseline_dangerous_24)
+                    else -> iv_wifi.setImageResource(R.drawable.ic_baseline_dangerous_24)
+                }
+            }
+        }
+
+        tv_version.text = "Version: " + packageManager.getPackageInfo(packageName, 0)?.versionName
+
+        val subscriptionManager = SubscriptionManager.from(applicationContext)
+        val subsInfoList = subscriptionManager.activeSubscriptionInfoList
+
+        subsInfoList.forEachIndexed { index, subscriptionInfo ->
+            val simView = simViewsList[index]
+            val simImageView = simImagesList[index]
+
+            simView.visibility = View.VISIBLE
+            simImageView.visibility = View.VISIBLE
+
+            simView.text = "ID:${subscriptionInfo.cardId} slot:${subscriptionInfo.simSlotIndex + 1}"
+            Glide.with(this)
+                .load(subscriptionInfo.createIconBitmap(this))
+                .apply(RequestOptions().centerCrop())
+                .apply(RequestOptions().override(65, 65))
+                .into(simImageView)
+        }
+
+
+
     }
+
+//    fun dialUssdToGetPhoneNumber(ussdCode: String, sim: Int) {
+//        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+//            requestPermissions(arrayOf(Manifest.permission.CALL_PHONE), 23423)
+//            return
+//        }
+//        println("54ss dialUssdToGetPhoneNumber ")
+//        val manager = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
+//        val manager2 = manager.createForSubscriptionId(2)
+//        val managerMain = if (sim == 0) manager else manager2
+//        managerMain.sendUssdRequest(ussdCode, object : UssdResponseCallback() {
+//            override fun onReceiveUssdResponse(telephonyManager: TelephonyManager, request: String, response: CharSequence) {
+//                println("54ss onReceiveUssdResponse       response  = " + response)
+//            }
+//
+//            override fun onReceiveUssdResponseFailed(telephonyManager: TelephonyManager, request: String, failureCode: Int) {
+//                println("54ss onReceiveUssdResponseFailed       failureCode  = " + failureCode)
+//            }
+//        }, Handler(Looper.getMainLooper()))
+//    }
+
 
 
     private fun requestPermissions() {
@@ -163,6 +195,8 @@ class MainActivity : AppCompatActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_BOOT_COMPLETED) != PackageManager.PERMISSION_GRANTED ||
             ContextCompat.checkSelfPermission(this, Manifest.permission.SYSTEM_ALERT_WINDOW) != PackageManager.PERMISSION_GRANTED ||
             ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED ||
             ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED
         ) {
             ActivityCompat.requestPermissions(
@@ -170,6 +204,8 @@ class MainActivity : AppCompatActivity() {
                     Manifest.permission.RECEIVE_BOOT_COMPLETED,
                     Manifest.permission.SYSTEM_ALERT_WINDOW,
                     Manifest.permission.RECEIVE_SMS,
+                    Manifest.permission.READ_PHONE_STATE,
+                    Manifest.permission.CALL_PHONE,
                     Manifest.permission.READ_SMS,
                 ), REQUEST_CODE
             )
@@ -212,25 +248,26 @@ class MainActivity : AppCompatActivity() {
     class SmsAdapter : RecyclerView.Adapter<SmsViewHolder>() {
         val itemsList = mutableListOf<SmsObject>()
 
-        fun updateAdapter(tel: String? = null, mess: String? = null, context: Context, recyclerView: RecyclerView?) {
+        fun updateAdapter(tel: String? = null, mess: String? = null, context: Context, recyclerView: RecyclerView?, smsSlot: String? = "") {
             itemsList.clear()
-            val smsObject = if (tel != null && mess != null) SmsObject(tel, mess) else null
+
+            val smsObject = if (tel != null && mess != null) SmsObject(tel = tel, mess = mess, simSlot = smsSlot) else null
             val lisSmsObjects =
                 Gson().fromJson<MutableList<SmsObject>>(
                     context.getSharedPreferences(SMS_OBJECTS_NAME, MODE_PRIVATE).getString(SMS_OBJECTS_LIST, null),
                     object : TypeToken<MutableList<SmsObject>>() {}.type
                 );
-            val dateNow = Date().time
-            val diff = 1000 * 60 * 15
+//            val dateNow = Date().time
+//            val diff = 1000 * 60 * 15
 
             if (lisSmsObjects == null || lisSmsObjects.isEmpty()) {
                 smsObject?.let { itemsList.add(it) }
             } else {
                 lisSmsObjects.forEachIndexed { index, smsObject ->
-                    println("53ss lisSmsObjects it = " + smsObject)
-                    if ((dateNow - smsObject.date.time) < diff) {
-                        itemsList.add(smsObject)
-                    }
+//                    println("53ss lisSmsObjects it = " + smsObject)
+//                    if ((dateNow - smsObject.date.time) < diff) {
+                    itemsList.add(smsObject)
+//                    }
                 }
                 smsObject?.let { itemsList.add(it) }
             }
@@ -258,10 +295,9 @@ class MainActivity : AppCompatActivity() {
         val tel = itemView.findViewById<AppCompatTextView>(R.id.tel)
         val mess = itemView.findViewById<AppCompatTextView>(R.id.mess)
         fun bind(smsObject: SmsObject, i: Int) {
-            this.num.text = i.toString()
-            val joda = DateTime(smsObject.date)
-            this.date.text = "Date: ${joda.toString("dd")}-${joda.toString("MMM")}-${joda.toString("YYYY")} " +
-                    "${joda.toString("HH")}:${joda.toString("mm")}:${joda.toString("ss")}  "
+            this.num.text = "Sim" + smsObject.simSlot
+            val date = DateTime(smsObject.date).toString("YY-MM-dd HH:m:ss")
+            this.date.text = date
             this.tel.text = "Tel: " + smsObject.tel
             this.mess.text = "Message: " + smsObject.mess
         }
@@ -289,6 +325,23 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         App.mainActivityResumed = false
     }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        // R.menu.mymenu is a reference to an xml file named mymenu.xml which should be inside your res/menu directory.
+        // If you don't have res/menu, just create a directory named "menu" inside res
+        menuInflater.inflate(R.menu.mymenu, menu)
+        return super.onCreateOptionsMenu(menu)
+    }
+
+    // handle button activities
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        val id = item.itemId
+        if (id == R.id.mybutton) {
+            startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel: *${Uri.encode("#")}06${Uri.encode("#")}")))
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
 
 
 }

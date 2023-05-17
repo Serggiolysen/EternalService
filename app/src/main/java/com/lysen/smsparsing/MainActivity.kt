@@ -7,18 +7,22 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.net.Uri
 import android.os.*
 import android.provider.Settings
 import android.telephony.SubscriptionManager
+import android.text.style.ForegroundColorSpan
 import android.view.*
-import android.widget.ImageView
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.text.buildSpannedString
+import androidx.core.text.inSpans
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
@@ -35,17 +39,11 @@ import com.lysen.smsparsing.models.SmsObject
 import com.lysen.smsparsing.utils.AutoStartHelper
 import com.lysen.smsparsing.workers.SMS_Receiver
 import com.lysen.smsparsing.workers.SyncWorker
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-import org.joda.time.DateTime
+import kotlinx.coroutines.*
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-
-
-class MainActivity : AppCompatActivity(), ApiSender.ApiCallback {
+class MainActivity : AppCompatActivity(), ApiSender.ApiCallback, TokenSendContract {
 
     companion object {
         val REQUEST_CODE = 123222
@@ -62,35 +60,67 @@ class MainActivity : AppCompatActivity(), ApiSender.ApiCallback {
     private var SMS_EXTRA_DATE = ""
     private var SMS_EXTRA_MESS = ""
     private var ACTION_TYPE = ""
-    private var SMS_SLOT = -1
+    private var SMS_SLOT = "-1"
+    lateinit var iv_wifi: AppCompatImageView
+    lateinit var tv_version: AppCompatTextView
+    lateinit var tv_sim1: AppCompatTextView
+    lateinit var iv_danger_sim1: AppCompatImageView
+    lateinit var tv_sim2: AppCompatTextView
+    lateinit var iv_danger_sim2: AppCompatImageView
+    lateinit var tv_sim3: AppCompatTextView
+    lateinit var iv_danger_sim3: AppCompatImageView
+    lateinit var simViewsList: List<AppCompatTextView>
+    lateinit var simImagesList: List<AppCompatImageView>
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent) {
+            ACTION_TYPE = intent.getStringExtra(SMS_Receiver.ACTION_TYPE) ?: ""
             SMS_EXTRA_TEL = intent.getStringExtra(SMS_Receiver.SMS_EXTRA_TEL) ?: ""
             SMS_EXTRA_DATE = intent.getStringExtra(SMS_Receiver.SMS_EXTRA_DATE) ?: ""
             SMS_EXTRA_MESS = intent.getStringExtra(SMS_Receiver.SMS_EXTRA_MESS) ?: ""
-            ACTION_TYPE = intent.getStringExtra(SMS_Receiver.ACTION_TYPE) ?: ""
-            SMS_SLOT = intent.getIntExtra(SMS_Receiver.SMS_SLOT, -1)
+            SMS_SLOT = intent.getStringExtra(SMS_Receiver.SMS_SLOT) ?: ""
 
-            println("54ss  updateAdapter smsSlot  =  " + SMS_SLOT)
-            println("53ss ACTION_TYPE =  " + ACTION_TYPE)
+
+            println("54ss receiver updateAdapter smsSlot  =  " + SMS_SLOT)
 
             if (ACTION_TYPE == Intent.ACTION_BOOT_COMPLETED) ApiSender.send(reportKind = ReportKind.REBOOTED)
+            if (SMS_SLOT == SMS_Receiver.ACTION_SIM_STATE_CHANGED) getSimInfo()
 
-            if ( SMS_EXTRA_TEL.isEmpty() || SMS_EXTRA_MESS.isEmpty()) return
+            if (SMS_EXTRA_TEL.isEmpty() || SMS_EXTRA_MESS.isEmpty()) return
 
-            ApiSender.send(reportKind = ReportKind.SMS, sms_extra_tel = SMS_EXTRA_TEL, sms_extra_mess = SMS_EXTRA_MESS, sms_extra_date = SMS_EXTRA_DATE, apiCallback = this@MainActivity)
+            ApiSender.send(reportKind = ReportKind.SMS, sms_extra_tel = SMS_EXTRA_TEL,
+                sms_extra_mess = SMS_EXTRA_MESS, sms_extra_date = SMS_EXTRA_DATE, apiCallback = this@MainActivity)
         }
     }
 
-    override fun onSuccess() {
-        println("53ss onSuccess() =  ")
-        adapter?.updateAdapter(tel = SMS_EXTRA_TEL, mess = SMS_EXTRA_MESS, context = this, recyclerView = recycler, smsSlot = SMS_SLOT.toString())
+    override fun onApiSuccess() {
+        println("56ss onSuccess() =  ")
+        if (SMS_EXTRA_TEL.isEmpty() || SMS_EXTRA_MESS.isEmpty()) return
+        adapter?.updateAdapter(
+            tel = SMS_EXTRA_TEL, mess = SMS_EXTRA_MESS, context = this,
+            recyclerView = recycler, smsSlot = SMS_SLOT, status = true, sms_extra_date = SMS_EXTRA_DATE
+        )
     }
 
-    override fun onError() {
-        println("53ss onError() =  ")
+    override fun onApiError() {
+        println("56ss onError() =  ")
+        val warningDialogFragment = WarningDialogFragment()
+        warningDialogFragment.tokenSendContract = this
+        warningDialogFragment.show(supportFragmentManager, "tag")
     }
+
+
+    override fun onTokenSend(token: String) {
+    }
+
+    override fun onTokenCancel() {
+        Toast.makeText(this, "Closing app...", Toast.LENGTH_SHORT).show()
+        CoroutineScope(Dispatchers.Main).launch {
+            delay(1500)
+            finish()
+        }
+    }
+
 
     private val batteryReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent) {
@@ -105,23 +135,30 @@ class MainActivity : AppCompatActivity(), ApiSender.ApiCallback {
     }
 
 
+    private val appCompatImageView: AppCompatImageView?
+        get() {
+            val iv_wifi = findViewById<AppCompatImageView>(R.id.iv_wifi)
+            return iv_wifi
+        }
+
+
+
     @RequiresApi(Build.VERSION_CODES.Q)
-    @SuppressLint("MissingPermission", "NewApi")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         requestPermissions()
 
-        val iv_wifi = findViewById<AppCompatImageView>(R.id.iv_wifi)
-        val tv_version = findViewById<AppCompatTextView>(R.id.tv_version)
-        val tv_sim1 = findViewById<AppCompatTextView>(R.id.tv_sim1)
-        val iv_danger_sim1 = findViewById<AppCompatImageView>(R.id.iv_danger_sim1)
-        val tv_sim2 = findViewById<AppCompatTextView>(R.id.tv_sim2)
-        val iv_danger_sim2 = findViewById<AppCompatImageView>(R.id.iv_danger_sim2)
-        val tv_sim3 = findViewById<AppCompatTextView>(R.id.tv_sim3)
-        val iv_danger_sim3 = findViewById<AppCompatImageView>(R.id.iv_danger_sim3)
-        val simViewsList = listOf<AppCompatTextView>(tv_sim1, tv_sim2, tv_sim3)
-        val simImagesList = listOf<AppCompatImageView>(iv_danger_sim1, iv_danger_sim2, iv_danger_sim3)
+        iv_wifi = findViewById(R.id.iv_wifi)
+        tv_version = findViewById(R.id.tv_version)
+        tv_sim1 = findViewById(R.id.tv_sim1)
+        iv_danger_sim1 = findViewById(R.id.iv_danger_sim1)
+        tv_sim2 = findViewById(R.id.tv_sim2)
+        iv_danger_sim2 = findViewById(R.id.iv_danger_sim2)
+        tv_sim3 = findViewById(R.id.tv_sim3)
+        iv_danger_sim3 = findViewById(R.id.iv_danger_sim3)
+        simViewsList = listOf(tv_sim1, tv_sim2, tv_sim3)
+        simImagesList = listOf(iv_danger_sim1, iv_danger_sim2, iv_danger_sim3)
 
         scope.launch {
             App.netState.collect { netState ->
@@ -138,8 +175,24 @@ class MainActivity : AppCompatActivity(), ApiSender.ApiCallback {
 
         tv_version.text = "Version: " + packageManager.getPackageInfo(packageName, 0)?.versionName
 
+        getSimInfo()
+
+        ApiSender.sendToApi(apiCallback = this)
+
+    }
+
+    @SuppressLint("MissingPermission", "NewApi")
+    private fun getSimInfo() {
+
         val subscriptionManager = SubscriptionManager.from(applicationContext)
         val subsInfoList = subscriptionManager.activeSubscriptionInfoList
+
+        println("54ss getSimInfo !!!!!!  subsInfoList size = "+subsInfoList.size)
+        if (subsInfoList.isEmpty()){
+            simViewsList.forEach { it.visibility = View.GONE }
+            simImagesList.forEach { it.visibility = View.GONE }
+            return
+        }
 
         subsInfoList.forEachIndexed { index, subscriptionInfo ->
             val simView = simViewsList[index]
@@ -149,15 +202,13 @@ class MainActivity : AppCompatActivity(), ApiSender.ApiCallback {
             simImageView.visibility = View.VISIBLE
 
             simView.text = "ID:${subscriptionInfo.cardId} slot:${subscriptionInfo.simSlotIndex + 1}"
+
             Glide.with(this)
                 .load(subscriptionInfo.createIconBitmap(this))
                 .apply(RequestOptions().centerCrop())
                 .apply(RequestOptions().override(65, 65))
                 .into(simImageView)
         }
-
-
-
     }
 
 //    fun dialUssdToGetPhoneNumber(ussdCode: String, sim: Int) {
@@ -248,28 +299,29 @@ class MainActivity : AppCompatActivity(), ApiSender.ApiCallback {
     class SmsAdapter : RecyclerView.Adapter<SmsViewHolder>() {
         val itemsList = mutableListOf<SmsObject>()
 
-        fun updateAdapter(tel: String? = null, mess: String? = null, context: Context, recyclerView: RecyclerView?, smsSlot: String? = "") {
+        fun updateAdapter(tel: String? = null, mess: String? = null, context: Context, recyclerView: RecyclerView?, smsSlot: String? = "", status: Boolean = false, sms_extra_date: String) {
             itemsList.clear()
 
-            val smsObject = if (tel != null && mess != null) SmsObject(tel = tel, mess = mess, simSlot = smsSlot) else null
+            val smsObject =
+                if (tel != null && mess != null) SmsObject(tel = tel, mess = mess, simSlot = smsSlot, status = status, sms_extra_date = sms_extra_date) else null
             val lisSmsObjects =
                 Gson().fromJson<MutableList<SmsObject>>(
                     context.getSharedPreferences(SMS_OBJECTS_NAME, MODE_PRIVATE).getString(SMS_OBJECTS_LIST, null),
                     object : TypeToken<MutableList<SmsObject>>() {}.type
                 );
-//            val dateNow = Date().time
-//            val diff = 1000 * 60 * 15
+            val dateNow = Date().time
+            val diff = 1000 * 60 * 60 * 24
 
             if (lisSmsObjects == null || lisSmsObjects.isEmpty()) {
                 smsObject?.let { itemsList.add(it) }
             } else {
                 lisSmsObjects.forEachIndexed { index, smsObject ->
-//                    println("53ss lisSmsObjects it = " + smsObject)
-//                    if ((dateNow - smsObject.date.time) < diff) {
-                    itemsList.add(smsObject)
-//                    }
+                    if ((dateNow - smsObject.date.time) < diff && index < 20) {
+                        itemsList.add(smsObject)
+                    }
                 }
                 smsObject?.let { itemsList.add(it) }
+                println("53ss lisSmsObjects it = " + itemsList.size)
             }
 
             context.getSharedPreferences(SMS_OBJECTS_NAME, MODE_PRIVATE).edit().putString(SMS_OBJECTS_LIST, Gson().toJson(itemsList)).apply()
@@ -294,12 +346,15 @@ class MainActivity : AppCompatActivity(), ApiSender.ApiCallback {
         val date = itemView.findViewById<AppCompatTextView>(R.id.date)
         val tel = itemView.findViewById<AppCompatTextView>(R.id.tel)
         val mess = itemView.findViewById<AppCompatTextView>(R.id.mess)
+        val status = itemView.findViewById<AppCompatTextView>(R.id.status)
         fun bind(smsObject: SmsObject, i: Int) {
-            this.num.text = "Sim" + smsObject.simSlot
-            val date = DateTime(smsObject.date).toString("YY-MM-dd HH:m:ss")
-            this.date.text = date
+            this.num.text = "№$adapterPosition   Sim" + smsObject.simSlot
+            this.date.text = smsObject.sms_extra_date
             this.tel.text = "Tel: " + smsObject.tel
             this.mess.text = "Message: " + smsObject.mess
+            this.status.text = if (smsObject.status) "Status: SENT" else buildSpannedString {
+                inSpans(ForegroundColorSpan(Color.RED)) { append("Status: NOT SENT") }
+            }
         }
     }
 
@@ -317,7 +372,7 @@ class MainActivity : AppCompatActivity(), ApiSender.ApiCallback {
         recycler?.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, true)
         adapter = SmsAdapter()
         recycler?.adapter = adapter
-        adapter?.updateAdapter(context = this, recyclerView = recycler)
+        adapter?.updateAdapter(context = this, recyclerView = recycler, status = true, sms_extra_date = SMS_EXTRA_DATE)
         App.mainActivityResumed = true
     }
 

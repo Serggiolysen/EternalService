@@ -11,9 +11,9 @@
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 4,
-      "versionName": "1.4",
-      "outputFile": "smsparsing-4-release.apk"
+      "versionCode": 5,
+      "versionName": "1.5",
+      "outputFile": "smsparsing-5-release.apk"
     }
   ],
   "elementType": "File"

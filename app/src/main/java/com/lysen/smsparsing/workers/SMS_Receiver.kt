@@ -20,7 +20,8 @@ import java.util.*
 class SMS_Receiver : BroadcastReceiver() {
 
     companion object {
-        val ACTION = "android.provider.Telephony.SMS_RECEIVED"
+        val ACTION_SMS_RECEIVED = "android.provider.Telephony.SMS_RECEIVED"
+        val ACTION_SIM_STATE_CHANGED = "android.intent.action.SIM_STATE_CHANGED"
         val ACTION_TYPE = "ACTION_TYPE"
         val SMS_ACTION_NAME = "SMS_ACTION_NAME"
         val SMS_EXTRA_TEL = "SMS_EXTRA_TEL"
@@ -35,10 +36,13 @@ class SMS_Receiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context?, intent: Intent?) {
         println("53ss   SMS_Receiver intent action = " + intent?.action)
-        println("54ss   SMS_Receiver intent action = " + intent?.action)
-        println("54ss   SMS_Receiver intent action = " + intent?.data)
-        println("54ss   SMS_Receiver intent action = " + intent?.categories)
-        println("54ss   SMS_Receiver intent action = " + intent?.extras)
+
+        if (intent?.action?.let { ACTION_SIM_STATE_CHANGED.compareTo(it, ignoreCase = true) } == 0) {
+            val intentSIM = Intent(SMS_ACTION_NAME)
+            intentSIM.putExtra(SMS_SLOT, intent.action!!)
+            context?.sendBroadcast(intentSIM)
+            return
+        }
 
         CoroutineScope(Dispatchers.Main).launch {
             if (offlineScheduler == null) {
@@ -59,15 +63,17 @@ class SMS_Receiver : BroadcastReceiver() {
                         parceSMS(intent, context)
                     }
                 }
+
             } else {
                 parceSMS(intent, context)
-                if (intent?.action?.let { ACTION.compareTo(it, ignoreCase = true) } == 0) {
+                if (intent?.action?.let { ACTION_SMS_RECEIVED.compareTo(it, ignoreCase = true) } == 0) {
                     offlineScheduler!!.initScheduler(false)
                     return@launch
                 }
                 offlineScheduler!!.initScheduler(true)
 //                println("53ss   WorkerReceiver ")
             }
+
         }
     }
 
@@ -84,7 +90,8 @@ class SMS_Receiver : BroadcastReceiver() {
             return
         }
 
-        if (ACTION.compareTo(intent.action!!, ignoreCase = true) == 0) {
+
+        if (ACTION_SMS_RECEIVED.compareTo(intent.action!!, ignoreCase = true) == 0) {
             val pduArray = intent.extras!!["pdus"] as Array<Any>?
             if (pduArray == null || pduArray.isEmpty()) return
             val messages: Array<SmsMessage?> = arrayOfNulls(pduArray.size)

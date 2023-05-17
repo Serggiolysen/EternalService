@@ -42,30 +42,30 @@
         android:paddingTop="6dp"
         android:orientation="horizontal">
 
-        <androidx.appcompat.widget.AppCompatTextView
-            android:id="@+id/tv_key"
-            style="@style/tv_style"
-            android:text="Key: " />
+<!--        <androidx.appcompat.widget.AppCompatTextView-->
+<!--            android:id="@+id/tv_key"-->
+<!--            style="@style/tv_style"-->
+<!--            android:text="Key: " />-->
 
 
-        <androidx.appcompat.widget.AppCompatImageView
-            android:id="@+id/iv_danger_key"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="4dp"
-            android:src="@drawable/ic_baseline_dangerous_24"
-            android:text="version:1.0" />
+<!--        <androidx.appcompat.widget.AppCompatImageView-->
+<!--            android:id="@+id/iv_danger_key"-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_marginEnd="4dp"-->
+<!--            android:src="@drawable/ic_baseline_dangerous_24"-->
+<!--            android:text="version:1.0" />-->
 
-        <androidx.appcompat.widget.AppCompatTextView
-            android:id="@+id/tv_fix"
-            style="@style/tv_style"
-            android:layout_marginEnd="24dp"
-            android:background="@drawable/fix_background"
-            android:clickable="true"
-            android:focusable="true"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
-            android:text="fix" />
+<!--        <androidx.appcompat.widget.AppCompatTextView-->
+<!--            android:id="@+id/tv_fix"-->
+<!--            style="@style/tv_style"-->
+<!--            android:layout_marginEnd="24dp"-->
+<!--            android:background="@drawable/fix_background"-->
+<!--            android:clickable="true"-->
+<!--            android:focusable="true"-->
+<!--            android:paddingStart="10dp"-->
+<!--            android:paddingEnd="10dp"-->
+<!--            android:text="fix" />-->
 
         <androidx.appcompat.widget.AppCompatTextView
             android:id="@+id/tv_server"

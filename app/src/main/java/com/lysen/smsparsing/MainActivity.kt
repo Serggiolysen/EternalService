@@ -19,6 +19,7 @@ import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.appcompat.widget.AppCompatTextView
+import androidx.appcompat.widget.LinearLayoutCompat
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.text.buildSpannedString
@@ -43,7 +44,7 @@ import kotlinx.coroutines.*
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-class MainActivity : AppCompatActivity(), ApiSender.ApiCallback, TokenSendContract {
+class MainActivity : AppCompatActivity(), ApiSender.ApiCallback, TokenSendContract, ImeiSetContract {
 
     companion object {
         val REQUEST_CODE = 123222
@@ -63,23 +64,24 @@ class MainActivity : AppCompatActivity(), ApiSender.ApiCallback, TokenSendContra
     private var SMS_SLOT = "-1"
     lateinit var iv_wifi: AppCompatImageView
     lateinit var tv_version: AppCompatTextView
-    lateinit var tv_sim1: AppCompatTextView
-    lateinit var iv_danger_sim1: AppCompatImageView
-    lateinit var tv_sim2: AppCompatTextView
-    lateinit var iv_danger_sim2: AppCompatImageView
-    lateinit var tv_sim3: AppCompatTextView
-    lateinit var iv_danger_sim3: AppCompatImageView
+
+    lateinit var simParentsList: List<LinearLayoutCompat>
     lateinit var simViewsList: List<AppCompatTextView>
     lateinit var simImagesList: List<AppCompatImageView>
+    lateinit var imeiViewsList: List<AppCompatTextView>
+    lateinit var tokensViewsList: List<AppCompatTextView>
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent) {
             ACTION_TYPE = intent.getStringExtra(SMS_Receiver.ACTION_TYPE) ?: ""
             SMS_EXTRA_TEL = intent.getStringExtra(SMS_Receiver.SMS_EXTRA_TEL) ?: ""
+
+            if  (SMS_EXTRA_DATE == intent.getStringExtra(SMS_Receiver.SMS_EXTRA_DATE) ||
+                SMS_EXTRA_MESS == intent.getStringExtra(SMS_Receiver.SMS_EXTRA_MESS)) return
+
             SMS_EXTRA_DATE = intent.getStringExtra(SMS_Receiver.SMS_EXTRA_DATE) ?: ""
             SMS_EXTRA_MESS = intent.getStringExtra(SMS_Receiver.SMS_EXTRA_MESS) ?: ""
             SMS_SLOT = intent.getStringExtra(SMS_Receiver.SMS_SLOT) ?: ""
-
 
             println("54ss receiver updateAdapter smsSlot  =  " + SMS_SLOT)
 
@@ -88,8 +90,10 @@ class MainActivity : AppCompatActivity(), ApiSender.ApiCallback, TokenSendContra
 
             if (SMS_EXTRA_TEL.isEmpty() || SMS_EXTRA_MESS.isEmpty()) return
 
-            ApiSender.send(reportKind = ReportKind.SMS, sms_extra_tel = SMS_EXTRA_TEL,
-                sms_extra_mess = SMS_EXTRA_MESS, sms_extra_date = SMS_EXTRA_DATE, apiCallback = this@MainActivity)
+            ApiSender.send(
+                reportKind = ReportKind.SMS, sms_extra_tel = SMS_EXTRA_TEL,
+                sms_extra_mess = SMS_EXTRA_MESS, sms_extra_date = SMS_EXTRA_DATE, apiCallback = this@MainActivity
+            )
         }
     }
 
@@ -135,13 +139,6 @@ class MainActivity : AppCompatActivity(), ApiSender.ApiCallback, TokenSendContra
     }
 
 
-    private val appCompatImageView: AppCompatImageView?
-        get() {
-            val iv_wifi = findViewById<AppCompatImageView>(R.id.iv_wifi)
-            return iv_wifi
-        }
-
-
 
     @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -151,14 +148,12 @@ class MainActivity : AppCompatActivity(), ApiSender.ApiCallback, TokenSendContra
 
         iv_wifi = findViewById(R.id.iv_wifi)
         tv_version = findViewById(R.id.tv_version)
-        tv_sim1 = findViewById(R.id.tv_sim1)
-        iv_danger_sim1 = findViewById(R.id.iv_danger_sim1)
-        tv_sim2 = findViewById(R.id.tv_sim2)
-        iv_danger_sim2 = findViewById(R.id.iv_danger_sim2)
-        tv_sim3 = findViewById(R.id.tv_sim3)
-        iv_danger_sim3 = findViewById(R.id.iv_danger_sim3)
-        simViewsList = listOf(tv_sim1, tv_sim2, tv_sim3)
-        simImagesList = listOf(iv_danger_sim1, iv_danger_sim2, iv_danger_sim3)
+
+        simParentsList = listOf(findViewById(R.id.simParent1), findViewById(R.id.simParent2), findViewById(R.id.simParent3))
+        simViewsList = listOf(findViewById(R.id.tv_sim1), findViewById(R.id.tv_sim2), findViewById(R.id.tv_sim3))
+        simImagesList = listOf(findViewById(R.id.iv_danger_sim1), findViewById(R.id.iv_danger_sim2), findViewById(R.id.iv_danger_sim3))
+        imeiViewsList = listOf(findViewById(R.id.tv_imei1), findViewById(R.id.tv_imei2), findViewById(R.id.tv_imei3))
+        tokensViewsList = listOf(findViewById(R.id.tv_token1), findViewById(R.id.tv_token2), findViewById(R.id.tv_token3))
 
         scope.launch {
             App.netState.collect { netState ->
@@ -187,29 +182,64 @@ class MainActivity : AppCompatActivity(), ApiSender.ApiCallback, TokenSendContra
         val subscriptionManager = SubscriptionManager.from(applicationContext)
         val subsInfoList = subscriptionManager.activeSubscriptionInfoList
 
-        println("54ss getSimInfo !!!!!!  subsInfoList size = "+subsInfoList.size)
-        if (subsInfoList.isEmpty()){
+        println("54ss getSimInfo !!!!!!  subsInfoList size = " + subsInfoList.size)
+        if (subsInfoList.isEmpty()) {
             simViewsList.forEach { it.visibility = View.GONE }
             simImagesList.forEach { it.visibility = View.GONE }
             return
         }
 
         subsInfoList.forEachIndexed { index, subscriptionInfo ->
+            val simParent = simParentsList[index]
             val simView = simViewsList[index]
             val simImageView = simImagesList[index]
+            val imeiView = imeiViewsList[index]
+            val tokenView = tokensViewsList[index]
 
             simView.visibility = View.VISIBLE
             simImageView.visibility = View.VISIBLE
+            imeiView.visibility = View.VISIBLE
+            tokenView.visibility = View.VISIBLE
 
             simView.text = "ID:${subscriptionInfo.cardId} slot:${subscriptionInfo.simSlotIndex + 1}"
+
+            when (index) {
+                0 -> imeiView.text = "IMEI: "+ App.getImei1()
+                1 -> imeiView.text = "IMEI: "+App.getImei2()
+                2 -> imeiView.text = "IMEI: "+App.getImei3()
+            }
+
+            if (App.getToken()?.isNotEmpty() == true) tokenView.text  = "Token: "+App.getToken()
 
             Glide.with(this)
                 .load(subscriptionInfo.createIconBitmap(this))
                 .apply(RequestOptions().centerCrop())
                 .apply(RequestOptions().override(65, 65))
                 .into(simImageView)
+
+            simParent.setOnClickListener {
+                val imeiDialogFragment = ImeiDialogFragment()
+                imeiDialogFragment.imeiSetContract = this
+                imeiDialogFragment.index = index
+                imeiDialogFragment.show(supportFragmentManager, "tag2")
+            }
         }
     }
+
+
+    override fun onImeiSet(imei: String, token: String, index: Int) {
+        when (index) {
+            0 -> App.saveImei1(imei)
+            1 -> App.saveImei2(imei)
+            2 -> App.saveImei3(imei)
+        }
+        if (App.getToken()?.isEmpty() == true) App.saveToken(token)
+        imeiViewsList[index].visibility = View.VISIBLE
+        tokensViewsList[index].visibility = View.VISIBLE
+        imeiViewsList[index].text = "IMEI: "+imei
+        tokensViewsList[index].text = "Token: "+token
+    }
+
 
 //    fun dialUssdToGetPhoneNumber(ussdCode: String, sim: Int) {
 //        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
@@ -389,13 +419,13 @@ class MainActivity : AppCompatActivity(), ApiSender.ApiCallback, TokenSendContra
     }
 
     // handle button activities
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        val id = item.itemId
-        if (id == R.id.mybutton) {
-            startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel: *${Uri.encode("#")}06${Uri.encode("#")}")))
-        }
-        return super.onOptionsItemSelected(item)
-    }
+//    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+//        val id = item.itemId
+//        if (id == R.id.mybutton) {
+//            startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel: *${Uri.encode("#")}06${Uri.encode("#")}")))
+//        }
+//        return super.onOptionsItemSelected(item)
+//    }
 
 
 

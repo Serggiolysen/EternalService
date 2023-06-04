@@ -31,6 +31,10 @@ class OfflineScheduler(private val context: Context) {
         alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + SCHEDULER_INTERVAL, pendingIntent)
     }
 
+    private fun checkVersion(){
+
+    }
+
     private fun sendServiceIsAlive(needTosend: Boolean = true) {
         if (!needTosend) return
         ApiSender.send(reportKind = ReportKind.ALIVE)

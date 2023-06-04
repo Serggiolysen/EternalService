@@ -18,18 +18,21 @@ class App : Application() {
         var context: Context? = null
         var mainActivityResumed = false
         val netState = MutableStateFlow(NetState.ERROR)
-        var secureId = ""
-        val smsStaus = MutableStateFlow(true)
         lateinit var sharedPrefs:SharedPreferences
         fun saveToken(token:String) = sharedPrefs.edit().putString("token", token).apply()
         fun getToken() = sharedPrefs.getString("token", "")
+        fun saveImei1(imei:String) = sharedPrefs.edit().putString("imei1", imei).apply()
+        fun getImei1() = sharedPrefs.getString("imei1", "")
+        fun saveImei2(imei:String) = sharedPrefs.edit().putString("imei2", imei).apply()
+        fun getImei2() = sharedPrefs.getString("imei2", "")
+        fun saveImei3(imei:String) = sharedPrefs.edit().putString("imei3", imei).apply()
+        fun getImei3() = sharedPrefs.getString("imei3", "")
     }
 
     @SuppressLint("HardwareIds")
     override fun onCreate() {
         super.onCreate()
         context = this
-        secureId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
         sharedPrefs = getSharedPreferences("AppConstants", MODE_PRIVATE)
     }
 

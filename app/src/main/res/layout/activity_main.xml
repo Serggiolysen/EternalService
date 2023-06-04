@@ -2,7 +2,6 @@
 <LinearLayout
 
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -39,33 +38,8 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingTop="6dp"
-        android:orientation="horizontal">
-
-<!--        <androidx.appcompat.widget.AppCompatTextView-->
-<!--            android:id="@+id/tv_key"-->
-<!--            style="@style/tv_style"-->
-<!--            android:text="Key: " />-->
-
-
-<!--        <androidx.appcompat.widget.AppCompatImageView-->
-<!--            android:id="@+id/iv_danger_key"-->
-<!--            android:layout_width="wrap_content"-->
-<!--            android:layout_height="wrap_content"-->
-<!--            android:layout_marginEnd="4dp"-->
-<!--            android:src="@drawable/ic_baseline_dangerous_24"-->
-<!--            android:text="version:1.0" />-->
-
-<!--        <androidx.appcompat.widget.AppCompatTextView-->
-<!--            android:id="@+id/tv_fix"-->
-<!--            style="@style/tv_style"-->
-<!--            android:layout_marginEnd="24dp"-->
-<!--            android:background="@drawable/fix_background"-->
-<!--            android:clickable="true"-->
-<!--            android:focusable="true"-->
-<!--            android:paddingStart="10dp"-->
-<!--            android:paddingEnd="10dp"-->
-<!--            android:text="fix" />-->
+        android:orientation="horizontal"
+        android:paddingTop="6dp">
 
         <androidx.appcompat.widget.AppCompatTextView
             android:id="@+id/tv_server"
@@ -82,6 +56,11 @@
 
     </LinearLayout>
 
+
+    <HorizontalScrollView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content">
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -89,57 +68,174 @@
         android:paddingTop="6dp"
         android:paddingBottom="8dp">
 
-        <androidx.appcompat.widget.AppCompatImageView
-            android:id="@+id/iv_danger_sim1"
+
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:id="@+id/simParent1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="4dp"
-            android:src="@drawable/ic_baseline_dangerous_24"
-            android:text="version:1.0"
-            android:visibility="gone" />
+            android:background="@drawable/fix_background"
+            android:orientation="vertical"
+            android:padding="3dp"
+            android:layout_marginEnd="11dp">
 
-        <androidx.appcompat.widget.AppCompatTextView
-            android:id="@+id/tv_sim1"
-            style="@style/tv_style"
-            android:text="Sim 1: 8949"
-            android:visibility="gone"
-            android:layout_marginEnd="14dp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
 
-        <androidx.appcompat.widget.AppCompatImageView
-            android:id="@+id/iv_danger_sim2"
+                <androidx.appcompat.widget.AppCompatImageView
+                    android:id="@+id/iv_danger_sim1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    android:src="@drawable/ic_baseline_dangerous_24"
+                    android:text=""
+                    android:visibility="gone" />
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/tv_sim1"
+                    style="@style/tv_style"
+                    android:layout_marginEnd="14dp"
+                    android:text=""
+                    android:visibility="gone" />
+
+            </LinearLayout>
+
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/tv_imei1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="14dp"
+                android:text=""
+                android:textSize="10sp"
+                android:visibility="gone"
+                android:textColor="@color/black"/>
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/tv_token1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textSize="10sp"
+                android:visibility="gone"
+                android:textColor="@color/black" />
+
+
+        </androidx.appcompat.widget.LinearLayoutCompat>
+
+
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:id="@+id/simParent2"
             android:layout_width="wrap_content"
+            android:background="@drawable/fix_background"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="4dp"
-            android:src="@drawable/ic_baseline_dangerous_24"
-            android:text="version:1.0"
-            android:visibility="gone" />
+            android:orientation="vertical"
+            android:layout_marginEnd="11dp">
 
-        <androidx.appcompat.widget.AppCompatTextView
-            android:id="@+id/tv_sim2"
-            style="@style/tv_style"
-            android:text="Sim 2: 5219"
-            android:visibility="gone"
-            android:layout_marginEnd="14dp"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
 
-        <androidx.appcompat.widget.AppCompatImageView
-            android:id="@+id/iv_danger_sim3"
+                <androidx.appcompat.widget.AppCompatImageView
+                    android:id="@+id/iv_danger_sim2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    android:src="@drawable/ic_baseline_dangerous_24"
+                    android:text=""
+                    android:visibility="gone" />
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/tv_sim2"
+                    style="@style/tv_style"
+                    android:layout_marginEnd="14dp"
+                    android:text=""
+                    android:visibility="gone" />
+
+            </LinearLayout>
+
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/tv_imei2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="14dp"
+                android:text=""
+                android:textSize="10sp"
+                android:visibility="gone"
+                android:textColor="@color/black"/>
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/tv_token2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textSize="10sp"
+                android:visibility="gone"
+                android:textColor="@color/black"/>
+
+
+        </androidx.appcompat.widget.LinearLayoutCompat>
+
+
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:id="@+id/simParent3"
             android:layout_width="wrap_content"
+            android:background="@drawable/fix_background"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="4dp"
-            android:src="@drawable/ic_baseline_dangerous_24"
-            android:text="version:1.0"
-            android:visibility="gone" />
+            android:orientation="vertical"
+            android:layout_marginEnd="11dp">
 
-        <androidx.appcompat.widget.AppCompatTextView
-            android:id="@+id/tv_sim3"
-            style="@style/tv_style"
-            android:text="Sim 3: 1149"
-            android:visibility="gone" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
 
+                <androidx.appcompat.widget.AppCompatImageView
+                    android:id="@+id/iv_danger_sim3"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    android:src="@drawable/ic_baseline_dangerous_24"
+                    android:text=""
+                    android:visibility="gone" />
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/tv_sim3"
+                    style="@style/tv_style"
+                    android:text="9"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/tv_imei3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="14dp"
+                android:text=""
+                android:textSize="10sp"
+                android:visibility="gone"
+                android:textColor="@color/black" />
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/tv_token3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textSize="10sp"
+                android:visibility="gone"
+                android:textColor="@color/black"/>
+
+
+        </androidx.appcompat.widget.LinearLayoutCompat>
 
 
     </LinearLayout>
 
+    </HorizontalScrollView>
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"

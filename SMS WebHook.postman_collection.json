@@ -1,0 +1,59 @@
+{
+	"info": {
+		"_postman_id": "66ae7be9-1660-48bf-b6aa-606f3d2ac06c",
+		"name": "SMS WebHook",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "2325821"
+	},
+	"item": [
+		{
+			"name": "https://providerservice.digitalpostpaid.com/api/external/app/sms_webhook/v1",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "d00faf0e989fa356db16",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"device\": {\r\n        \"model\": \"samsung\"\r\n    },\r\n    \"sms\": {\r\n        \"body\": \"Hello World! Benutzer: 1111-21222\",\r\n        \"from\": \"Postman\",\r\n        \"received\": \"23-05-06 20:07:06\",\r\n        \"sent\": \"23-05-06 20:06:51\"\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://providerservice.digitalpostpaid.com/api/external/app/sms_webhook/v1",
+					"protocol": "https",
+					"host": [
+						"providerservice",
+						"digitalpostpaid",
+						"com"
+					],
+					"path": [
+						"api",
+						"external",
+						"app",
+						"sms_webhook",
+						"v1"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

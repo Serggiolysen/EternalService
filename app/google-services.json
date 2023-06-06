@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "282181613663",
+    "project_id": "smsparsing2",
+    "storage_bucket": "smsparsing2.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:282181613663:android:ad1e21b0d71432cd17c3ea",
+        "android_client_info": {
+          "package_name": "com.lysen.smsparsing"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "282181613663-kp2sie9u012r5icq3uknahg2m6u20ojl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAkDIFv-NqaOOhJ4sWZa6JVCEmG_W5lmbI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "282181613663-kp2sie9u012r5icq3uknahg2m6u20ojl.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -120,13 +120,17 @@ class SMS_Receiver : BroadcastReceiver() {
             println("53ss initialPhone " + initialPhone)
 
             val smsSlot = smsSimRecognizer(intent)
-            println("54ss smsSlot " + smsSlot)
+            println("54ss SMS_Receiver ACTION_TYPE " + intent.action!!)
+            println("54ss SMS_Receiver SMS_EXTRA_TEL " + initialPhone)
+            println("54ss SMS_Receiver SMS_EXTRA_DATE " + sentDate)
+            println("54ss SMS_Receiver SMS_EXTRA_MESS " + initialSMStext)
+            println("54ss SMS_Receiver SMS_SLOT " + smsSlot.toString())
 
             val intentSms = Intent(SMS_ACTION_NAME)
             intentSms.putExtra(SMS_EXTRA_TEL, initialPhone)
             intentSms.putExtra(SMS_EXTRA_DATE, sentDate)
             intentSms.putExtra(SMS_EXTRA_MESS, initialSMStext)
-            intentSms.putExtra(SMS_SLOT, smsSlot)
+            intentSms.putExtra(SMS_SLOT, smsSlot.toString())
             intentSms.putExtra(ACTION_TYPE, intent.action!!)
             context?.sendBroadcast(intentSms)
 

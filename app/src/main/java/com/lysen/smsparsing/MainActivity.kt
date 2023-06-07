@@ -83,7 +83,11 @@ class MainActivity : AppCompatActivity(), ApiSender.ApiCallback, TokenSendContra
             SMS_EXTRA_MESS = intent.getStringExtra(SMS_Receiver.SMS_EXTRA_MESS) ?: ""
             SMS_SLOT = intent.getStringExtra(SMS_Receiver.SMS_SLOT) ?: ""
 
-            println("54ss receiver updateAdapter smsSlot  =  " + SMS_SLOT)
+            println("54ss MainActivity receiver ACTION_TYPE     =  " + ACTION_TYPE)
+            println("54ss MainActivity receiver SMS_EXTRA_TEL   =  " + SMS_EXTRA_TEL)
+            println("54ss MainActivity receiver SMS_EXTRA_DATE  =  " + SMS_EXTRA_DATE)
+            println("54ss MainActivity receiver SMS_EXTRA_MESS  =  " + SMS_EXTRA_MESS)
+            println("54ss MainActivity receiver SMS_SLOT        =  " + SMS_SLOT)
 
             if (ACTION_TYPE == Intent.ACTION_BOOT_COMPLETED) ApiSender.send(reportKind = ReportKind.REBOOTED)
             if (SMS_SLOT == SMS_Receiver.ACTION_SIM_STATE_CHANGED) getSimInfo()

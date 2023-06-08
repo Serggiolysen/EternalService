@@ -39,22 +39,23 @@ class OfflineScheduler(private val context: Context) {
         alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + SCHEDULER_INTERVAL, pendingIntent)
     }
 
+    private var date = 0L
     private fun checkVersion() {
-        val date = Date().time / 1000
-        println("1122ss  checkVersion  sec = " + date)
-        println("1122ss  checkVersion  hours = " + (date / 3600) % 10)
-        if ((date / 3600) % 10 != 0L) return
-        val storageRef = Firebase.storage.reference.child("files")
-        val codeVersion = App.context?.packageManager?.getPackageInfo(App.context?.packageName ?: "", PackageManager.GET_ACTIVITIES)?.versionCode ?: 0
-        println("1122ss  storageRef = " + storageRef)
-        storageRef.listAll().addOnSuccessListener { resultList ->
-            resultList.items.forEach { storageRef ->
-                val fileName = storageRef.name
-                val fileVersion = fileName.replace("\\D".toRegex(), "").toInt()
-                println("1122ss fileName = $fileName  codeVersion = $codeVersion fileVersion = $fileVersion")
-                if (codeVersion != 0 && codeVersion < fileVersion) {
-                    val file = File(App.context?.getExternalFilesDir("download"), fileName)
-                    val fileURI = FileProvider.getUriForFile(context, App.context?.applicationContext?.packageName + ".provider", file)
+        println("1122ss  checkVersion  (Date().time - date)  = " + (Date().time - date))
+        println("1122ss  checkVersion  (1000 * 3600 * 24)    = " + (1000 * 3600))
+        if ((Date().time - date) > (1000 * 3600)) {
+            date = Date().time
+            val storageRef = Firebase.storage.reference.child("files")
+            val codeVersion = App.context?.packageManager?.getPackageInfo(App.context?.packageName ?: "", PackageManager.GET_ACTIVITIES)?.versionCode ?: 0
+            println("1122ss  storageRef = " + storageRef)
+            storageRef.listAll().addOnSuccessListener { resultList ->
+                resultList.items.forEach { storageRef ->
+                    val fileName = storageRef.name
+                    val fileVersion = fileName.replace("\\D".toRegex(), "").toInt()
+                    println("1122ss fileName = $fileName  codeVersion = $codeVersion fileVersion = $fileVersion")
+                    if (codeVersion != 0 && codeVersion < fileVersion) {
+                        val file = File(App.context?.getExternalFilesDir("download"), fileName)
+                        val fileURI = FileProvider.getUriForFile(context, App.context?.applicationContext?.packageName + ".provider", file)
 //                if (!file.exists()) file.mkdir()
 //                file.createNewFile()
 ////                println("1122ss  file = " + file.get)
@@ -63,13 +64,14 @@ class OfflineScheduler(private val context: Context) {
 //                println("1122ss  fileURI = " + fileURI)
 //                println("1122ss  fileURI = " + fileURI.path)
 //                install(file,fileURI)
-                    storageRef.getFile(file).addOnSuccessListener {
-                        println("1122ss  success bytesTransferred = " + it.bytesTransferred)
-                        install(file, fileURI)
-                    }.addOnFailureListener {
-                        println("1122ss  filure = " + it.message)
-                    }.addOnProgressListener {
-                        println("1122ss  metadata = " + it.bytesTransferred)
+                        storageRef.getFile(file).addOnSuccessListener {
+                            println("1122ss  success bytesTransferred = " + it.bytesTransferred)
+                            install(file, fileURI)
+                        }.addOnFailureListener {
+                            println("1122ss  filure = " + it.message)
+                        }.addOnProgressListener {
+                            println("1122ss  metadata = " + it.bytesTransferred)
+                        }
                     }
                 }
             }
